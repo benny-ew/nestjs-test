@@ -7,6 +7,7 @@ import { Task } from './entities/task.entity';
 import { TasksModule } from './tasks/tasks.module';
 import { TerminusModule } from '@nestjs/terminus';
 import { HealthModule } from './health/health.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { HealthModule } from './health/health.module';
       }),
     }),
     TypeOrmModule.forFeature([Task]),
+    AuthModule,
     TasksModule,
     TerminusModule,
     HealthModule,

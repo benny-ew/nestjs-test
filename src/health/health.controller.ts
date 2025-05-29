@@ -5,9 +5,11 @@ import {
   TypeOrmHealthIndicator 
 } from '@nestjs/terminus';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Public } from 'nest-keycloak-connect';
 
 @ApiTags('health')
 @Controller('health')
+@Public() // Make all health endpoints public
 export class HealthController {
   constructor(
     private health: HealthCheckService,

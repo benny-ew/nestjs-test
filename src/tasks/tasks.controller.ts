@@ -1,13 +1,15 @@
 import { Controller, Get, Post, Body, Param, Put, Patch, Delete, HttpCode, HttpStatus, UsePipes, ValidationPipe, Query, NotFoundException } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { TasksService } from './tasks.service';
 import { Task, TaskStatus } from '../entities/task.entity';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { FindTaskDto } from './dto/find-task.dto';
+import { CurrentUser, User, Roles } from '../auth/index';
 
 @ApiTags('tasks')
 @Controller('tasks')
+@ApiBearerAuth('JWT-auth')
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
@@ -30,6 +32,7 @@ export class TasksController {
       }
     }
   })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   findAll(
     @Query('status') status?: TaskStatus,
@@ -37,6 +40,7 @@ export class TasksController {
     @Query('description') description?: string,
     @Query('page', new ValidationPipe({ transform: true })) page: number = 1,
     @Query('limit', new ValidationPipe({ transform: true })) limit: number = 10,
+    @CurrentUser() user?: User,
   ): Promise<{ tasks: Task[]; total: number; page: number; limit: number }> {
     const filterDto: FindTaskDto = { status, title, description, page, limit };
     return this.tasksService.findAll(filterDto);
@@ -46,8 +50,9 @@ export class TasksController {
   @ApiOperation({ summary: 'Get a task by ID' })
   @ApiParam({ name: 'id', description: 'The ID of the task', example: 'e2a7dde0-5e80-4b86-a60c-4c5ed2a72bb5' })
   @ApiResponse({ status: 200, description: 'Task found', type: Task })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Task not found' })
-  findOne(@Param('id') id: string): Promise<Task> {
+  findOne(@Param('id') id: string, @CurrentUser() user?: User): Promise<Task> {
     // Check if ID is a valid UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(id)) {
@@ -62,8 +67,9 @@ export class TasksController {
   @ApiBody({ type: CreateTaskDto })
   @ApiResponse({ status: 201, description: 'Task created successfully', type: Task })
   @ApiResponse({ status: 400, description: 'Bad Request: Invalid input or validation failed' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-  create(@Body() createTaskDto: CreateTaskDto): Promise<Task> {
+  create(@Body() createTaskDto: CreateTaskDto, @CurrentUser() user?: User): Promise<Task> {
     return this.tasksService.create(createTaskDto);
   }
 
@@ -72,9 +78,10 @@ export class TasksController {
   @ApiParam({ name: 'id', description: 'The ID of the task', example: 'e2a7dde0-5e80-4b86-a60c-4c5ed2a72bb5' })
   @ApiResponse({ status: 200, description: 'Task updated successfully', type: Task })
   @ApiResponse({ status: 400, description: 'Bad Request: Invalid input or validation failed' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Task not found' })
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-  update(@Param('id') id: string, @Body() updateTaskDto: UpdateTaskDto): Promise<Task> {
+  update(@Param('id') id: string, @Body() updateTaskDto: UpdateTaskDto, @CurrentUser() user?: User): Promise<Task> {
     return this.tasksService.update(id, updateTaskDto);
   }
 
@@ -84,19 +91,23 @@ export class TasksController {
   @ApiBody({ type: UpdateTaskDto })
   @ApiResponse({ status: 200, description: 'Task partially updated successfully', type: Task })
   @ApiResponse({ status: 400, description: 'Bad Request: Invalid input or validation failed' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Task not found' })
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-  patch(@Param('id') id: string, @Body() updateTaskDto: UpdateTaskDto): Promise<Task> {
+  patch(@Param('id') id: string, @Body() updateTaskDto: UpdateTaskDto, @CurrentUser() user?: User): Promise<Task> {
     return this.tasksService.update(id, updateTaskDto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a task by ID' })
+  @Roles('admin') // Only admins can delete tasks
+  @ApiOperation({ summary: 'Delete a task by ID (Admin only)' })
   @ApiParam({ name: 'id', description: 'The ID of the task', example: 'e2a7dde0-5e80-4b86-a60c-4c5ed2a72bb5' })
   @ApiResponse({ status: 204, description: 'Task deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
   @ApiResponse({ status: 404, description: 'Task not found' })
-  remove(@Param('id') id: string): Promise<void> {
+  remove(@Param('id') id: string, @CurrentUser() user?: User): Promise<void> {
     return this.tasksService.remove(id);
   }
 }
