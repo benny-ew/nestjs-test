@@ -13,11 +13,11 @@ import { AuthGuard } from '@nestjs/passport';
 @ApiTags('tasks')
 @Controller('tasks')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(AuthGuard('jwt'))
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Get()
+  @Roles('user', 'admin') // Both users and admins can view tasks
   @ApiOperation({ summary: 'Get all tasks with optional filtering and pagination' })
   @ApiQuery({ name: 'status', enum: TaskStatus, required: false, description: 'Filter tasks by status' })
   @ApiQuery({ name: 'title', type: String, required: false, description: 'Search for tasks with titles containing this term' })
@@ -51,6 +51,7 @@ export class TasksController {
   }
 
   @Get(':id')
+  @Roles('user', 'admin') // Both users and admins can view individual tasks
   @ApiOperation({ summary: 'Get a task by ID' })
   @ApiParam({ name: 'id', description: 'The ID of the task', example: 'e2a7dde0-5e80-4b86-a60c-4c5ed2a72bb5' })
   @ApiResponse({ status: 200, description: 'Task found', type: Task })
@@ -67,6 +68,7 @@ export class TasksController {
   }
 
   @Post()
+  @Roles('user', 'admin') // Both users and admins can create tasks
   @ApiOperation({ summary: 'Create a new task' })
   @ApiBody({ type: CreateTaskDto })
   @ApiResponse({ status: 201, description: 'Task created successfully', type: Task })
@@ -78,6 +80,7 @@ export class TasksController {
   }
 
   @Put(':id')
+  @Roles('admin') // Only admins can do full updates
   @ApiOperation({ summary: 'Replace a task by ID (full update)' })
   @ApiParam({ name: 'id', description: 'The ID of the task', example: 'e2a7dde0-5e80-4b86-a60c-4c5ed2a72bb5' })
   @ApiResponse({ status: 200, description: 'Task updated successfully', type: Task })
@@ -90,6 +93,7 @@ export class TasksController {
   }
 
   @Patch(':id')
+  @Roles('user', 'admin') // Both users and admins can do partial updates
   @ApiOperation({ summary: 'Update a task partially by ID' })
   @ApiParam({ name: 'id', description: 'The ID of the task', example: 'e2a7dde0-5e80-4b86-a60c-4c5ed2a72bb5' })
   @ApiBody({ type: UpdateTaskDto })
@@ -103,6 +107,7 @@ export class TasksController {
   }
 
   @Delete(':id')
+  @Roles('admin') // Only admins can delete tasks
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a task by ID (Admin only)' })
   @ApiParam({ name: 'id', description: 'The ID of the task', example: 'e2a7dde0-5e80-4b86-a60c-4c5ed2a72bb5' })

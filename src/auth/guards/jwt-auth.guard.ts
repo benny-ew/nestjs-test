@@ -3,20 +3,24 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { AuthGuard } from '@nestjs/passport';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { AuthService, User } from '../auth.service';
 
 @Injectable()
-export class RolesGuard implements CanActivate {
+export class JwtAuthGuard extends AuthGuard('jwt') implements CanActivate {
   constructor(
     private reflector: Reflector,
     private authService: AuthService,
-  ) {}
+  ) {
+    super();
+  }
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     // Check if route is public
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
@@ -26,21 +30,27 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
+    // First, authenticate the user using JWT
+    const isAuthenticated = await super.canActivate(context);
+    if (!isAuthenticated) {
+      return false;
+    }
+
     // Get required roles
     const requiredRoles = this.reflector.getAllAndOverride<string[]>(
       ROLES_KEY,
       [context.getHandler(), context.getClass()],
     );
 
-    if (!requiredRoles) {
+    // If no roles are required, just authentication is enough
+    if (!requiredRoles || requiredRoles.length === 0) {
       return true;
     }
 
+    // Check roles
     const { user } = context.switchToHttp().getRequest();
     if (!user) {
-      // If there's no user but roles are required, let other guards handle authentication
-      // This allows AuthGuard('jwt') to run and populate the user
-      return true;
+      throw new UnauthorizedException('User not authenticated');
     }
 
     const userRoles = this.authService.getUserRoles(user as User);
@@ -51,7 +61,7 @@ export class RolesGuard implements CanActivate {
 
     if (!hasRole) {
       throw new ForbiddenException(
-        `User does not have required roles: ${requiredRoles.join(', ')}`,
+        `User does not have required roles: ${requiredRoles.join(', ')}. User has: ${userRoles.join(', ')}`,
       );
     }
 

@@ -58,8 +58,8 @@ export class AuthService {
     const clientId = this.configService.get<string>('KEYCLOAK_CLIENT_ID') || 'monita-public-app';
     const clientRoles = user.resource_access?.[clientId]?.roles || [];
     
-    // Combine realm roles and client roles
-    return [...realmRoles, ...clientRoles.map(role => `${clientId}:${role}`)];
+    // Return both realm roles and client roles (without prefix for easier role checking)
+    return [...realmRoles, ...clientRoles];
   }
 
   getClientRoles(user: User, clientId: string): string[] {
