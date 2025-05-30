@@ -27,10 +27,12 @@ export class AuthService {
 
   async validateToken(token: string): Promise<User> {
     try {
-      const decoded = this.jwtService.verify(token, {
-        secret: this.configService.get<string>('KEYCLOAK_CLIENT_SECRET') || 'default-secret',
-      });
-      return decoded;
+      // Let Passport and JwtStrategy handle verification with JWKS
+      const decoded = this.jwtService.decode(token);
+      if (!decoded) {
+        throw new Error('Invalid token format');
+      }
+      return decoded as User;
     } catch (error) {
       throw new UnauthorizedException('Invalid token');
     }
@@ -51,7 +53,13 @@ export class AuthService {
   }
 
   getUserRoles(user: User): string[] {
-    return user.realm_access?.roles || [];
+    const realmRoles = user.realm_access?.roles || [];
+    // Get the client ID from config - this is needed to extract client-specific roles
+    const clientId = this.configService.get<string>('KEYCLOAK_CLIENT_ID') || 'monita-public-app';
+    const clientRoles = user.resource_access?.[clientId]?.roles || [];
+    
+    // Combine realm roles and client roles
+    return [...realmRoles, ...clientRoles.map(role => `${clientId}:${role}`)];
   }
 
   getClientRoles(user: User, clientId: string): string[] {

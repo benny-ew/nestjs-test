@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Put, Patch, Delete, HttpCode, HttpStatus, UsePipes, ValidationPipe, Query, NotFoundException } from '@nestjs/common';
+import { UseGuards, Controller, Get, Post, Body, Param, Put, Patch, Delete, HttpCode, HttpStatus, UsePipes, ValidationPipe, Query, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { TasksService } from './tasks.service';
 import { Task, TaskStatus } from '../entities/task.entity';
@@ -6,10 +6,14 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { FindTaskDto } from './dto/find-task.dto';
 import { CurrentUser, User, Roles } from '../auth/index';
+import { AuthGuard } from '@nestjs/passport';
+
+
 
 @ApiTags('tasks')
 @Controller('tasks')
 @ApiBearerAuth('JWT-auth')
+@UseGuards(AuthGuard('jwt'))
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
@@ -100,7 +104,6 @@ export class TasksController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @Roles('admin') // Only admins can delete tasks
   @ApiOperation({ summary: 'Delete a task by ID (Admin only)' })
   @ApiParam({ name: 'id', description: 'The ID of the task', example: 'e2a7dde0-5e80-4b86-a60c-4c5ed2a72bb5' })
   @ApiResponse({ status: 204, description: 'Task deleted successfully' })

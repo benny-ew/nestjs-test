@@ -1,4 +1,5 @@
 import { Controller, Get, Request, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService, User } from './auth.service';
 
@@ -8,6 +9,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Get('profile')
+  @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get user profile' })
   @ApiResponse({ status: 200, description: 'User profile retrieved successfully' })
@@ -17,6 +19,7 @@ export class AuthController {
   }
 
   @Get('roles')
+  @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get user roles' })
   @ApiResponse({ status: 200, description: 'User roles retrieved successfully' })
